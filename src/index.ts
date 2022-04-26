@@ -135,25 +135,52 @@ app.post(
 );
 
 app.post("/images", async (req: Request, res: Response, next: NextFunction) => {
-  let metadataKeys: any = [];
-  let nftKeys = req.body.keys;
+  req.accepts("application/json");
+  let metadatas: {
+    nftKey: String;
+    isValidKey: boolean;
+    metadata?: any;
+    state?: boolean;
+  }[] = [];
+  let metadataKeys: string[];
+  let nftKeys: string[];
 
+  if (!req.body.hasOwnProperty("keys") || !Array.isArray(req.body.keys)) {
+    res.status(400).json({ error: "invalid input" });
+    return 1;
+  }
+  nftKeys = req.body.keys;
   metadataKeys = await Promise.all(
-    nftKeys.map(async (v: any) => {
-      let metadataKey = (
-        await PublicKey.findProgramAddress(
-          [
-            Buffer.from("metadata", "utf-8"),
-            metadataProgramId.toBuffer(),
-            new PublicKey(v).toBuffer(),
-          ],
-          metadataProgramId
-        )
-      )[0];
+    nftKeys.map(async (v: string) => {
+      let metadataKey: PublicKey;
+      try {
+        metadataKey = (
+          await PublicKey.findProgramAddress(
+            [
+              Buffer.from("metadata", "utf-8"),
+              metadataProgramId.toBuffer(),
+              new PublicKey(v).toBuffer(),
+            ],
+            metadataProgramId
+          )
+        )[0];
 
-      return metadataKey.toString();
+        return metadataKey.toString();
+      } catch (err) {
+        metadataKey = SystemProgram.programId;
+
+        return metadataKey.toString();
+      }
     })
   );
+
+  metadatas = metadataKeys.map((v, i) => {
+    if (v === SystemProgram.programId.toString()) {
+      return { nftKey: nftKeys[i], isValidKey: false };
+    } else {
+      return { nftKey: nftKeys[i], isValidKey: true };
+    }
+  });
 
   let jsonRpcRequestData = {
     jsonrpc: "2.0",
@@ -162,26 +189,69 @@ app.post("/images", async (req: Request, res: Response, next: NextFunction) => {
     params: [metadataKeys, {}],
   };
 
-  let rpcResponse = await axios({
-    method: "POST",
-    url: "https://solana-api.projectserum.com",
-    headers: { "Content-Type": "application/json" },
-    data: jsonRpcRequestData,
-  });
+  let rpcResponse: AxiosResponse<any, any> | null = null;
 
-  let metadataResponses = await Promise.all(
-    rpcResponse.data.result.value.map((v: any) => {
-      let metadata = Metadata.deserialize(Buffer.from(v.data[0], "base64"));
-      let metadataRes = axios({
-        method: "get",
-        url: metadata[0].data.uri,
-      });
-      return metadataRes;
-    })
-  );
-  let metadatas = metadataResponses.map((v) => v.data.image);
+  try {
+    rpcResponse = await axios({
+      method: "POST",
+      url: "https://solana-api.projectserum.com",
+      headers: { "Content-Type": "application/json" },
+      data: jsonRpcRequestData,
+    });
+  } catch (err) {
+    res.status(500).json({ error: ` Solana RPC Endpoint ERROR: ${err}` });
+  }
 
-  res.send(JSON.stringify(metadatas));
+  if (rpcResponse) {
+    let metadataUris = rpcResponse.data.result.value.map(
+      (v: any, i: number) => {
+        let onchainMetadata: [Metadata, number];
+        try {
+          onchainMetadata = Metadata.deserialize(
+            Buffer.from(v.data[0], "base64")
+          );
+
+          return onchainMetadata[0].data.uri;
+        } catch {
+          metadatas[i].isValidKey = false;
+          metadatas[i].metadata = null;
+          metadatas[i].state = false;
+          return null;
+        }
+      }
+    );
+
+    let offchainMetadatas = await Promise.all(
+      metadataUris.map((v: any, i: number) => {
+        let metadataResponse = null;
+        if (v !== null) {
+          try {
+            metadataResponse = axios({
+              method: "get",
+              url: v,
+            });
+          } catch {
+            metadatas[i].metadata = null;
+            metadatas[i].state = false;
+          }
+        }
+        return metadataResponse;
+      })
+    );
+
+    offchainMetadatas.forEach((v, i) => {
+      if (v !== null) {
+        metadatas[i].metadata = v.data.image;
+        metadatas[i].state = true;
+      }
+    });
+
+    res.status(200).json(metadatas);
+    return;
+  } else {
+    res.status(500).json({ error: ` Solana RPC Endpoint response is null` });
+    return 1;
+  }
 });
 
 app.listen("3000", () => {
