@@ -139,7 +139,7 @@ app.post("/images", async (req: Request, res: Response, next: NextFunction) => {
   let metadatas: {
     nftKey: String;
     isValidKey: boolean;
-    metadata?: any;
+    image?: any;
     state?: boolean;
   }[] = [];
   let metadataKeys: string[];
@@ -214,7 +214,7 @@ app.post("/images", async (req: Request, res: Response, next: NextFunction) => {
           return onchainMetadata[0].data.uri;
         } catch {
           metadatas[i].isValidKey = false;
-          metadatas[i].metadata = null;
+          metadatas[i].image = null;
           metadatas[i].state = false;
           return null;
         }
@@ -231,7 +231,7 @@ app.post("/images", async (req: Request, res: Response, next: NextFunction) => {
               url: v,
             });
           } catch {
-            metadatas[i].metadata = null;
+            metadatas[i].image = null;
             metadatas[i].state = false;
           }
         }
@@ -241,7 +241,7 @@ app.post("/images", async (req: Request, res: Response, next: NextFunction) => {
 
     offchainMetadatas.forEach((v, i) => {
       if (v !== null) {
-        metadatas[i].metadata = v.data.image;
+        metadatas[i].image = v.data.image;
         metadatas[i].state = true;
       }
     });
