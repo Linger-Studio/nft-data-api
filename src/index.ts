@@ -1,171 +1,124 @@
-import express, { Request, Response, NextFunction } from "express";
-import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
-import { Connection, PublicKey } from "@solana/web3.js";
-import axios from "axios";
+import {Metadata} from "@metaplex-foundation/mpl-token-metadata";
+import {PublicKey, SystemProgram} from "@solana/web3.js";
+import fetch from "node-fetch";
+import {APIGatewayProxyEventV2, APIGatewayProxyResultV2} from 'aws-lambda';
 
-const app = express();
-const connection = new Connection("https://api.mainnet-beta.solana.com");
+interface NftMetadata {
+    nftKey: string;
+    isValidKey: boolean;
+    address?: string;
+    metadata?: any;
+    metadataUri?: string;
+    state?: boolean;
+}
+
 const metadataProgramId = new PublicKey(
-  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+    "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
-app.use(express.text());
-app.use(express.json());
+async function dispatchAddress(list: NftMetadata[]) {
+    await Promise.all(
+        list.map(async item => {
+            const address = await PublicKey.findProgramAddress(
+                [
+                    Buffer.from("metadata", "utf-8"),
+                    metadataProgramId.toBuffer(),
+                    new PublicKey(item.nftKey).toBuffer(),
+                ],
+                metadataProgramId
+            ).then(item => item[0].toString())
 
-app.post(
-  "/metadata",
-  async (req: Request, res: Response, next: NextFunction) => {
-    const metadataKey = (
-      await PublicKey.findProgramAddress(
-        [
-          Buffer.from("metadata", "utf-8"),
-          metadataProgramId.toBuffer(),
-          new PublicKey(req.body).toBuffer(),
-        ],
-        metadataProgramId
-      )
-    )[0];
-    let metadata = await Metadata.fromAccountAddress(connection, metadataKey);
-    let metadataRes = await axios({
-      method: "get",
-      url: metadata.data.uri,
-    });
-    res.send(metadataRes.data);
-  }
-);
-
-app.post("/image", async (req: Request, res: Response, next: NextFunction) => {
-  const metadataKey = (
-    await PublicKey.findProgramAddress(
-      [
-        Buffer.from("metadata", "utf-8"),
-        metadataProgramId.toBuffer(),
-        new PublicKey(req.body).toBuffer(),
-      ],
-      metadataProgramId
+            item.address = address
+            item.isValidKey = address !== SystemProgram.programId.toString()
+        })
     )
-  )[0];
-  let metadata = await Metadata.fromAccountAddress(connection, metadataKey);
-  let metadataRes = await axios({
-    method: "get",
-    url: metadata.data.uri,
-  });
-  res.send(metadataRes.data.image);
-});
+}
 
-app.post(
-  "/metadatas",
-  async (req: Request, res: Response, next: NextFunction) => {
-    let metadataKeys: any = [];
-    let nftKeys = req.body.keys;
+async function dispatchMetadataUri(list: NftMetadata[]) {
+    const validList = list.filter(item => item.isValidKey)
+    const addresses = validList.map(item => item.address)
 
-    console.log(nftKeys);
-
-    metadataKeys = await Promise.all(
-      nftKeys.map(async (v: any) => {
-        let metadataKey = (
-          await PublicKey.findProgramAddress(
-            [
-              Buffer.from("metadata", "utf-8"),
-              metadataProgramId.toBuffer(),
-              new PublicKey(v).toBuffer(),
-            ],
-            metadataProgramId
-          )
-        )[0];
-
-        return metadataKey.toString();
-      })
-    );
-
-    console.log(metadataKeys);
-
-    let jsonRpcRequestData = {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "getMultipleAccounts",
-      params: [metadataKeys, {}],
+    const requestBody = {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getMultipleAccounts",
+        params: [addresses, {}],
     };
 
-    let rpcResponse = await axios({
-      method: "POST",
-      url: "https://solana-api.projectserum.com",
-      headers: { "Content-Type": "application/json" },
-      data: jsonRpcRequestData,
+    const response = await fetch('https://httpbin.org/post', {
+        method: 'post',
+        body: JSON.stringify(requestBody),
+        headers: {'Content-Type': 'application/json'}
     });
 
-    let metadataResponses = await Promise.all(
-      rpcResponse.data.result.value.map((v: any) => {
-        let metadata = Metadata.deserialize(Buffer.from(v.data[0], "base64"));
-        let metadataRes = axios({
-          method: "get",
-          url: metadata[0].data.uri,
-        });
-        return metadataRes;
-      })
-    );
+    const rpcResponse = await response.json();
 
-    let metadatas = metadataResponses.map((v) => v.data);
+    if (rpcResponse) {
+        rpcResponse.data.result.value.map(
+            (v: any, i: number) => {
+                let onchainMetadata: [Metadata, number];
+                try {
+                    onchainMetadata = Metadata.deserialize(
+                        Buffer.from(v.data[0], "base64")
+                    );
 
-    res.send(JSON.stringify(metadatas));
-  }
-);
+                    validList[i].metadataUri = onchainMetadata[0].data.uri
+                } catch {
+                    validList[i].isValidKey = false;
+                    validList[i].metadata = null;
+                    validList[i].state = false;
+                }
+            }
+        );
+    }
+}
 
-app.post("/images", async (req: Request, res: Response, next: NextFunction) => {
-  let metadataKeys: any = [];
-  let nftKeys = req.body.keys;
+async function dispatchMetadata(list: NftMetadata[]) {
+    await Promise.all(list.map(async item => {
+        if (item.isValidKey && item.metadataUri) {
+            try {
+                const url = item.metadataUri ?? ""
+                item.metadata = await fetch(url).then(res => res.json())
+                item.state = true
+            } catch {
+                item.metadata = null
+                item.state = false
+            }
+        }
+    }));
+}
 
-  console.log(nftKeys);
+export async function metadata(
+    event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+    const body = JSON.parse(event.body ?? "")
+    const nftKeys: string[] = body.keys;
 
-  metadataKeys = await Promise.all(
-    nftKeys.map(async (v: any) => {
-      let metadataKey = (
-        await PublicKey.findProgramAddress(
-          [
-            Buffer.from("metadata", "utf-8"),
-            metadataProgramId.toBuffer(),
-            new PublicKey(v).toBuffer(),
-          ],
-          metadataProgramId
-        )
-      )[0];
+    if (nftKeys == undefined) {
+        return {
+            statusCode: 403
+        }
+    }
 
-      return metadataKey.toString();
-    })
-  );
+    const response: NftMetadata[] = nftKeys.map(key => ({nftKey: key, isValidKey: false}))
 
-  console.log(metadataKeys);
+    await dispatchAddress(response)
+        .then(() => dispatchMetadataUri(response))
+        .catch(() => {
+            return {
+                statusCode: 500,
+                message: "Solana RPC Endpoint response is null"
+            }
+        })
+        .then(() => dispatchMetadata(response))
 
-  let jsonRpcRequestData = {
-    jsonrpc: "2.0",
-    id: 1,
-    method: "getMultipleAccounts",
-    params: [metadataKeys, {}],
-  };
-
-  let rpcResponse = await axios({
-    method: "POST",
-    url: "https://solana-api.projectserum.com",
-    headers: { "Content-Type": "application/json" },
-    data: jsonRpcRequestData,
-  });
-
-  let metadataResponses = await Promise.all(
-    rpcResponse.data.result.value.map((v: any) => {
-      let metadata = Metadata.deserialize(Buffer.from(v.data[0], "base64"));
-      let metadataRes = axios({
-        method: "get",
-        url: metadata[0].data.uri,
-      });
-      return metadataRes;
-    })
-  );
-
-  let metadatas = metadataResponses.map((v) => v.data.image);
-
-  res.send(JSON.stringify(metadatas));
-});
-
-app.listen("3000", () => {
-  console.log(`Server listening on port: 3000`);
-});
+    return {
+        statusCode: 200,
+        body: JSON.stringify(response.map(item => ({
+            nft_key: item.nftKey,
+            metadata: item.metadata,
+            is_valid_key: item.isValidKey,
+            state: item.state
+        })))
+    }
+}
