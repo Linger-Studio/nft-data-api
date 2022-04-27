@@ -5,8 +5,11 @@ plugins:
 
 provider:
   name: aws
+  stage: production
   runtime: nodejs14.x
   region: ap-northeast-2
+  tags:
+    Application: lingerstudio
 
 functions:
   metadata:
@@ -15,3 +18,4 @@ functions:
       - http:
           path: metadata
           method: post
+          private: true
