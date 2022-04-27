@@ -1,5 +1,5 @@
 import {Metadata} from "@metaplex-foundation/mpl-token-metadata";
-import {PublicKey, SystemProgram} from "@solana/web3.js";
+import {PublicKey} from "@solana/web3.js";
 import fetch from "node-fetch";
 import {APIGatewayProxyEventV2, APIGatewayProxyResultV2} from 'aws-lambda';
 
@@ -19,17 +19,20 @@ const metadataProgramId = new PublicKey(
 async function dispatchAddress(list: NftMetadata[]) {
     await Promise.all(
         list.map(async item => {
-            const address = await PublicKey.findProgramAddress(
-                [
-                    Buffer.from("metadata", "utf-8"),
-                    metadataProgramId.toBuffer(),
-                    new PublicKey(item.nftKey).toBuffer(),
-                ],
-                metadataProgramId
-            ).then(item => item[0].toString())
+            try {
+                item.address = await PublicKey.findProgramAddress(
+                    [
+                        Buffer.from("metadata", "utf-8"),
+                        metadataProgramId.toBuffer(),
+                        new PublicKey(item.nftKey).toBuffer(),
+                    ],
+                    metadataProgramId
+                ).then(item => item[0].toString())
 
-            item.address = address
-            item.isValidKey = address !== SystemProgram.programId.toString()
+                item.isValidKey = true
+            } catch {
+                item.isValidKey = false
+            }
         })
     )
 }
@@ -45,7 +48,7 @@ async function dispatchMetadataUri(list: NftMetadata[]) {
         params: [addresses, {}],
     };
 
-    const response = await fetch('https://httpbin.org/post', {
+    const response = await fetch('https://solana-api.projectserum.com', {
         method: 'post',
         body: JSON.stringify(requestBody),
         headers: {'Content-Type': 'application/json'}
@@ -54,7 +57,7 @@ async function dispatchMetadataUri(list: NftMetadata[]) {
     const rpcResponse = await response.json();
 
     if (rpcResponse) {
-        rpcResponse.data.result.value.map(
+        rpcResponse.result.value.map(
             (v: any, i: number) => {
                 let onchainMetadata: [Metadata, number];
                 try {
@@ -105,10 +108,7 @@ export async function metadata(
     await dispatchAddress(response)
         .then(() => dispatchMetadataUri(response))
         .catch(() => {
-            return {
-                statusCode: 500,
-                message: "Solana RPC Endpoint response is null"
-            }
+            throw new Error("Solana RPC Endpoint response is null")
         })
         .then(() => dispatchMetadata(response))
 
