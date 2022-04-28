@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@metaplex-foundation/mpl-token-metadata": "^2.1.0",
+    "@solana/spl-token": "^0.2.0",
     "@solana/web3.js": "^1.39.1",
     "@types/aws-lambda": "^8.10.95",
     "@types/node-fetch": "^2.6.1",
