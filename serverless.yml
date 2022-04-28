@@ -1,0 +1,21 @@
+service: lingerstudio-nft-data
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+provider:
+  name: aws
+  stage: production
+  runtime: nodejs14.x
+  region: ap-northeast-2
+  tags:
+    Application: lingerstudio
+
+functions:
+  metadata:
+    handler: src/index.metadata
+    events:
+      - http:
+          path: metadata
+          method: post
+          private: true
