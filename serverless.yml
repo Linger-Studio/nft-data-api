@@ -4,7 +4,7 @@ plugins:
   - serverless-offline
 provider:
   name: aws
-  stage: production
+  stage: dev
   runtime: nodejs14.x
   region: ap-northeast-2
   tags:
@@ -12,19 +12,20 @@ provider:
 
 functions:
   metadata:
-    handler: src/index.metadata
+    handler: src/metadata.handler
     events:
       - http:
           path: metadata
           method: post
-          private: true
+          private: false
   deposit:
-    handler: src/deposit.deposit
+    handler: src/deposit.handler
     events:
       - http:
           path: deposit
           method: post
           private: false
+    timeout: 30
     environment:
       LINGER_WALLET_PUBLICKEY: "LinfnYDjPQM1HuRfNgErh5VCiU7NVP5Yyf9Bbo1EtwY"
       OPERATOR_ACCOUNT: "NW3R8SIGlPbBTB2ALu7bdgobWKiE6FqGpKnSG4xu4vIFDUhSrjqdVbVPFw3NNrxyU/prFyhC3K0VibrlQ6mTcg=="

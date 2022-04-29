@@ -9,6 +9,7 @@ interface NftMetadata {
     address?: string;
     metadata?: any;
     metadataUri?: string;
+    collectionKey?: string;
     state?: boolean;
 }
 
@@ -48,7 +49,7 @@ async function dispatchMetadataUri(list: NftMetadata[]) {
         params: [addresses, {}],
     };
 
-    const response = await fetch('https://solana-api.projectserum.com', {
+    const response = await fetch('https://api.devnet.solana.com', {
         method: 'post',
         body: JSON.stringify(requestBody),
         headers: {'Content-Type': 'application/json'}
@@ -64,7 +65,7 @@ async function dispatchMetadataUri(list: NftMetadata[]) {
                     onchainMetadata = Metadata.deserialize(
                         Buffer.from(v.data[0], "base64")
                     );
-
+                    validList[i].collectionKey = onchainMetadata[0].collection?.key.toString()
                     validList[i].metadataUri = onchainMetadata[0].data.uri
                 } catch {
                     validList[i].isValidKey = false;
@@ -91,7 +92,7 @@ async function dispatchMetadata(list: NftMetadata[]) {
     }));
 }
 
-export async function metadata(
+export async function handler(
     event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
     const body = JSON.parse(event.body ?? "")
@@ -117,6 +118,7 @@ export async function metadata(
         body: JSON.stringify(response.map(item => ({
             nft_key: item.nftKey,
             metadata: item.metadata,
+            collection_key: item.collectionKey,
             is_valid_key: item.isValidKey,
             state: item.state
         })))

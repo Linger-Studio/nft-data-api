@@ -108,7 +108,7 @@ async function dispatchTransaction(item: TxResult, keys: Keys) {
   console.log(txHash);
 }
 
-export async function deposit(
+export async function handler(
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
   const body = JSON.parse(event.body ?? "");
