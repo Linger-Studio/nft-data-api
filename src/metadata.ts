@@ -17,6 +17,8 @@ const metadataProgramId = new PublicKey(
     "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
+const NET_URL: string = process.env.NET_URL ?? ""
+
 async function dispatchAddress(list: NftMetadata[]) {
     await Promise.all(
         list.map(async item => {
@@ -49,7 +51,7 @@ async function dispatchMetadataUri(list: NftMetadata[]) {
         params: [addresses, {}],
     };
 
-    const response = await fetch('https://api.devnet.solana.com', {
+    const response = await fetch(NET_URL, {
         method: 'post',
         body: JSON.stringify(requestBody),
         headers: {'Content-Type': 'application/json'}

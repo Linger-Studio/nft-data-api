@@ -1,17 +1,6 @@
-import {
-  AccountBalancePair,
-  Connection,
-  Keypair,
-  PublicKey,
-  Signer,
-} from "@solana/web3.js";
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
-import {
-  TOKEN_PROGRAM_ID,
-  transferChecked,
-  getOrCreateAssociatedTokenAccount,
-  Account,
-} from "@solana/spl-token";
+import {Connection, Keypair, PublicKey,} from "@solana/web3.js";
+import {APIGatewayProxyEventV2, APIGatewayProxyResultV2} from "aws-lambda";
+import {Account, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID, transferChecked,} from "@solana/spl-token";
 
 interface DepositInput {
   customerPrivateKey: string;
@@ -35,14 +24,15 @@ interface Keys {
   toTokenAccount: Account;
 }
 
+const NET_URL: string = process.env.NET_URL ?? ""
+const LINGER_WALLET_PUBLICKEY: string  = process.env.LINGER_WALLET_PUBLICKEY ?? "";
+
 const CONNECTION = new Connection(
-  "https://metaplex.devnet.rpcpool.com/",
+  NET_URL,
   "confirmed"
 );
 
-const LINGER_WALLET_PUBLICKEY = new PublicKey(
-  "LinfnYDjPQM1HuRfNgErh5VCiU7NVP5Yyf9Bbo1EtwY"
-);
+const publicKey = new PublicKey(LINGER_WALLET_PUBLICKEY);
 
 async function dispatchKeys(item: TxResult, operatorPrivateKey: string) {
   item.state = true;
@@ -71,7 +61,7 @@ async function dispatchKeys(item: TxResult, operatorPrivateKey: string) {
       CONNECTION,
       operatorAccount,
       nftKey,
-      LINGER_WALLET_PUBLICKEY
+      publicKey
     );
     item.customerPublicKey = customerAccount.publicKey.toString();
   } catch (err) {
@@ -115,8 +105,6 @@ export async function handler(
   const depositInfo: DepositInput = body.depositInfo;
   const OPERATOR_ACCOUNT_PRIVATEKEY: string | undefined =
     process.env.OPERATOR_ACCOUNT;
-  const LINGER_WALLET_PUBLICKEY: string | undefined =
-    process.env.LINGER_WALLET_PUBLICKEY;
 
   if (depositInfo === undefined) {
     return {

@@ -2,6 +2,8 @@ service: lingerstudio-nft-data
 plugins:
   - serverless-plugin-typescript
   - serverless-offline
+  - serverless-dotenv-plugin
+
 provider:
   name: aws
   stage: dev
@@ -26,6 +28,3 @@ functions:
           method: post
           private: false
     timeout: 30
-    environment:
-      LINGER_WALLET_PUBLICKEY: "LinfnYDjPQM1HuRfNgErh5VCiU7NVP5Yyf9Bbo1EtwY"
-      OPERATOR_ACCOUNT: "NW3R8SIGlPbBTB2ALu7bdgobWKiE6FqGpKnSG4xu4vIFDUhSrjqdVbVPFw3NNrxyU/prFyhC3K0VibrlQ6mTcg=="
