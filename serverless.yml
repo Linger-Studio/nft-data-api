@@ -2,10 +2,11 @@ service: lingerstudio-nft-data
 plugins:
   - serverless-plugin-typescript
   - serverless-offline
+  - serverless-dotenv-plugin
 
 provider:
   name: aws
-  stage: production
+  stage: dev
   runtime: nodejs14.x
   region: ap-northeast-2
   tags:
@@ -13,9 +14,17 @@ provider:
 
 functions:
   metadata:
-    handler: src/index.metadata
+    handler: src/metadata.handler
     events:
       - http:
           path: metadata
           method: post
-          private: true
+          private: false
+  deposit:
+    handler: src/deposit.handler
+    events:
+      - http:
+          path: deposit
+          method: post
+          private: false
+    timeout: 30

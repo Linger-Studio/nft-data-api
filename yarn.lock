@@ -654,6 +654,21 @@ aws-sdk@^2.1097.0:
     uuid "3.3.2"
     xml2js "0.4.19"
 
+aws-sdk@^2.1123.0:
+  version "2.1123.0"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.1123.0.tgz#56a94196482d4eb5de8217b9ad2138384caa6c73"
+  integrity sha512-yvPDpuzgz8a3YV99hJ0ChLWpbLxNuCiR8+0Fd4w/AoIf08OBZvTN0MAG/XnPVgTLya5qW8YZtghFTrodzwhYwg==
+  dependencies:
+    buffer "4.9.2"
+    events "1.1.1"
+    ieee754 "1.1.13"
+    jmespath "0.16.0"
+    querystring "0.2.0"
+    sax "1.2.1"
+    url "0.10.3"
+    uuid "3.3.2"
+    xml2js "0.4.19"
+
 axios@^0.21.1:
   version "0.21.4"
   resolved "https://registry.yarnpkg.com/axios/-/axios-0.21.4.tgz#c67b90dc0568e5c1cf2b0b858c43ba28e2eda575"
@@ -1034,6 +1049,16 @@ dot-prop@^5.2.0:
   integrity sha512-QM8q3zDe58hqUqjraQOmzZ1LIH9SWQJTlEKCH4kJ2oQvLZk7RbQXvtDM2XEq3fwkV9CCvvH4LA0AV+ogFsBM2Q==
   dependencies:
     is-obj "^2.0.0"
+
+dotenv-expand@^8.0.3:
+  version "8.0.3"
+  resolved "https://registry.yarnpkg.com/dotenv-expand/-/dotenv-expand-8.0.3.tgz#29016757455bcc748469c83a19b36aaf2b83dd6e"
+  integrity sha512-SErOMvge0ZUyWd5B0NXMQlDkN+8r+HhVUsxgOO7IoPDOdDRD2JjExpN6y3KnFR66jsJMwSn1pqIivhU5rcJiNg==
+
+dotenv@^16.0.0:
+  version "16.0.0"
+  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-16.0.0.tgz#c619001253be89ebb638d027b609c75c26e47411"
+  integrity sha512-qD9WU0MPM4SWLPJy/r2Be+2WgQj8plChsyrCNQzW/0WjvcJQiKQJ9mH3ZgB3fxbUUxgc/11ZJ0Fi5KiimWGz2Q==
 
 duplexer3@^0.1.4:
   version "0.1.4"
@@ -2444,6 +2469,15 @@ semver@^7.3.4, semver@^7.3.5:
   integrity sha512-QlYTucUYOews+WeEujDoEGziz4K6c47V/Bd+LjSSYcA94p+DmINdf7ncaUinThfvZyu13lN9OY1XDxt8C0Tw0g==
   dependencies:
     lru-cache "^6.0.0"
+
+serverless-dotenv-plugin@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/serverless-dotenv-plugin/-/serverless-dotenv-plugin-4.0.0.tgz#2192eaa56e1c8e33dae1dabfa92ddf17050e5c2f"
+  integrity sha512-uzwQloZxT9M5PE0PiHgk6qZEEXLFDLkejDkW4x3cNTelyCsW0t34xj0Sg666eztVTkcVhZIFVQlyG2cDUoagcw==
+  dependencies:
+    chalk "^4.1.2"
+    dotenv "^16.0.0"
+    dotenv-expand "^8.0.3"
 
 serverless-offline@^8.7.0:
   version "8.7.0"
